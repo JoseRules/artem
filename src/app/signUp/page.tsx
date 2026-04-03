@@ -2,50 +2,13 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/contexts/UserContext';
+import { AvailabilityDay, AvailabilityPayloadEntry, SignupPayload } from '@/types/user';
+import { formatHourLabel, toNumberField, toStringField } from '@/utils/formatting';
+import { AVAILABILITY_DAYS, AVAILABILITY_HOURS } from '@/utils/constants';
+import { uploadProfilePic } from '@/lib/api/user/uploadProfilePic';
+import { register } from '@/lib/api/user/register';
 
-type AvailabilityDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
-
-const AVAILABILITY_DAYS: Array<{ key: AvailabilityDay; label: string }> = [
-  { key: 'monday', label: 'Mon' },
-  { key: 'tuesday', label: 'Tue' },
-  { key: 'wednesday', label: 'Wed' },
-  { key: 'thursday', label: 'Thu' },
-  { key: 'friday', label: 'Fri' },
-];
-
-// Interpreting "7am to 9pm" as slots that end at 9:00 PM.
-// Example: 8pm row represents 8:00 PM - 9:00 PM.
-const AVAILABILITY_START_HOUR = 7; // 7:00
-const AVAILABILITY_END_HOUR = 21; // boundary (9:00 PM)
-const AVAILABILITY_HOURS = Array.from(
-  { length: AVAILABILITY_END_HOUR - AVAILABILITY_START_HOUR },
-  (_, i) => AVAILABILITY_START_HOUR + i,
-);
-
-type AvailabilityPayloadEntry = { day: AvailabilityDay; start: number; end: number };
-
-type SignUpPayload = {
-  firstname: string;
-  lastname: string;
-  dateOfBirth: string;
-  gender: string;
-  phone: string;
-  email: string;
-  password: string;
-  profilePic: string | null;
-  role: 'patient' | 'doctor';
-  specialty?: string;
-  npi?: string; 
-  experience?: number;
-  price?: number;
-  location?: string;
-  languages?: string;
-  availability?: AvailabilityPayloadEntry[];
-  diseases?: string;
-  allergies?: string;
-  weight?: number;
-  height?: number;
-};
 
 function buildInitialAvailability(): Record<AvailabilityDay, boolean[]> {
   const slotsCount = AVAILABILITY_HOURS.length;
@@ -88,22 +51,9 @@ function buildAvailabilityPayload(
   return payload;
 }
 
-function formatHourLabel(hour24: number) {
-  const suffix = hour24 >= 12 ? 'PM' : 'AM';
-  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${hour12 < 10 ? '0' + hour12 : hour12}:00 ${suffix}`;
-}
-
-function toNumberField(rawValue: FormDataEntryValue | null): number{
-  return Number(rawValue ?? '');
-}
-
-function toStringField(formData: FormData, key: string): string {
-  return String(formData.get(key) ?? '').trim();
-}
-
 export default function SignUp() {
   const router = useRouter();
+  const { setUser } = useUser();
   const [userType, setUserType] = useState<'patient' | 'doctor' | ''>('');
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,29 +85,13 @@ export default function SignUp() {
     setIsSubmitting(true);
     try {
       const formData = new FormData(e.currentTarget);
-      const preset_key = 'hefawgex';
-      const cloud_name = 'de3taspqp';
-      const cloudinaryURL = `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`;
-
-      let profilePicUrl: string | null = null;
+      let profilePicUrl: string = "";
       if (profilePicture) {
-        const imageData = new FormData();
-        const imageBlob = await (await fetch(profilePicture)).blob();
-        imageData.append('file', imageBlob, 'profile-picture.jpg');
-        imageData.append('upload_preset', preset_key);
-        const uploadRes = await fetch(cloudinaryURL, {
-          method: 'POST',
-          body: imageData,
-        });
-        if (!uploadRes.ok) {
-          throw new Error('Profile image upload failed');
-        }
-        const uploadJson = await uploadRes.json();
-        profilePicUrl = uploadJson.secure_url ?? null;
+        profilePicUrl = await uploadProfilePic(profilePicture);
       }
 
-      const basePayload: SignUpPayload = {
-        profilePic: profilePicUrl,
+      const basePayload: SignupPayload = {
+        profilePic: profilePicUrl ? profilePicUrl : null,
         firstname: toStringField(formData, 'firstName'),
         lastname: toStringField(formData, 'lastName'),
         dateOfBirth: toStringField(formData, 'dateOfBirth'),
@@ -168,7 +102,7 @@ export default function SignUp() {
         password: toStringField(formData, 'password'),
       };
 
-      let payload: SignUpPayload;
+      let payload: SignupPayload;
 
       if (userType === 'patient') {
         payload = {
@@ -191,16 +125,8 @@ export default function SignUp() {
         };
       }
 
-      const signUpRes = await fetch('https://artem-api.onrender.com/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!signUpRes.ok) {
-        throw new Error('Sign up failed');
-      }
-
+      const createdUser = await register(payload);
+      setUser(createdUser);
       router.push('/account');
     } catch {
       // Optional: surface error UI later

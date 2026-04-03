@@ -1,10 +1,24 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArtemIcon, CandleIcon } from '@/assets/icons';
 import ThemeToggle from './ThemeToggle';
+import { useUser } from '@/contexts/UserContext';
 
 export default function Navbar() {
+  const { user } = useUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const firstName =
+    (typeof user?.firstname === 'string' && user.firstname.trim()) ||
+    (typeof user?.firstName === 'string' && user.firstName.trim()) ||
+    '';
+
   return (
     <nav className="
       sticky top-0 z-50
@@ -40,23 +54,61 @@ export default function Navbar() {
             </h1>
           </div>
 
-          {/* Right side - Sign Up Button and Theme Toggle */}
+          {/* Right side - Auth buttons or greeting + Theme Toggle */}
           <div className="flex items-center space-x-4">
-            <Link
-              href="/signUp"
-              className="
-                px-4 py-2
-                rounded-lg
-                bg-primary hover:bg-primary/90
-                text-white
-                font-medium
-                transition-all duration-200 ease-in-out
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                active:scale-95
-              "
-            >
-              Sign Up
-            </Link>
+            {mounted && user ? (
+              <Link
+                href="/account"
+                className="
+                  px-4 py-2
+                  rounded-lg
+                  bg-primary hover:bg-primary/90
+                  text-white
+                  font-medium
+                  transition-all duration-200 ease-in-out
+                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                  active:scale-95
+                  whitespace-nowrap
+                "
+              >
+                Hello{firstName ? ` ${firstName}` : ''}!
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="
+                    px-4 py-2
+                    rounded-lg
+                    bg-background
+                    border border-border
+                    text-foreground
+                    font-medium
+                    transition-all duration-200 ease-in-out
+                    hover:bg-accent/40
+                    focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                    active:scale-95
+                  "
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signUp"
+                  className="
+                    px-4 py-2
+                    rounded-lg
+                    bg-primary hover:bg-primary/90
+                    text-white
+                    font-medium
+                    transition-all duration-200 ease-in-out
+                    focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                    active:scale-95
+                  "
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
             <ThemeToggle />
           </div>
         </div>
