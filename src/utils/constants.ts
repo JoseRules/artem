@@ -1,3 +1,5 @@
+import { AvailabilityDay } from '@/types/user';
+
 const AVAILABILITY_DAYS: Array<{ key: AvailabilityDay; label: string }> = [
   { key: 'monday', label: 'Mon' },
   { key: 'tuesday', label: 'Tue' },

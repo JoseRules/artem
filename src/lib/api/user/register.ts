@@ -1,3 +1,5 @@
+import { SignupPayload } from '@/types/user';
+
 export async function register(payload: SignupPayload) {
   const signUpRes = await fetch('https://artem-api.onrender.com/api/users', {
     method: 'POST',

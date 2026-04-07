@@ -1,8 +1,8 @@
-type AvailabilityEntry = { day: AvailabilityDay; start: number; end: number };
+export type AvailabilityPayloadEntry = { day: AvailabilityDay; start: number; end: number };
 
-type AvailabilityDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
+export type AvailabilityDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
 
-type User = {
+export type User = {
   _id: string;
   firstname: string;
   lastname: string;
@@ -18,13 +18,13 @@ type User = {
   price?: number;
   location?: string;
   languages?: string;
-  availability?: AvailabilityEntry[];
+  availability?: AvailabilityPayloadEntry[];
   diseases?: string;
   allergies?: string;
   weight?: number;
   height?: number;
 };
 
-type SignupPayload = Omit<User, "_id"> & {
+export type SignupPayload = Omit<User, "_id"> & {
   password: string;
 };

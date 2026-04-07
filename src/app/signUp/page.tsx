@@ -8,6 +8,7 @@ import { formatHourLabel, toNumberField, toStringField } from '@/utils/formattin
 import { AVAILABILITY_DAYS, AVAILABILITY_HOURS } from '@/utils/constants';
 import { uploadProfilePic } from '@/lib/api/user/uploadProfilePic';
 import { register } from '@/lib/api/user/register';
+import Image from 'next/image';
 
 
 function buildInitialAvailability(): Record<AvailabilityDay, boolean[]> {
@@ -181,7 +182,7 @@ export default function SignUp() {
               <div className="relative">
                 {profilePicture ? (
                   <div className="relative">
-                    <img
+                    <Image
                       src={profilePicture}
                       alt="Profile preview"
                       className="

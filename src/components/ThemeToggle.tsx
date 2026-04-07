@@ -30,21 +30,22 @@ const MoonIcon = () => (
 
 export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Always call useTheme at the top level to follow Rules of Hooks
   let theme = 'light';
-  let toggleTheme = () => {};
-  
+  let toggleTheme = () => { };
+
   try {
     const themeContext = useTheme();
     theme = themeContext.theme;
     toggleTheme = themeContext.toggleTheme;
   } catch (error) {
     // ThemeProvider not available yet, use defaults
+    console.log(error);
   }
 
   // Don't render until mounted to prevent hydration mismatch
@@ -85,16 +86,14 @@ export default function ThemeToggle() {
     >
       <div className="relative w-5 h-5">
         <div
-          className={`absolute inset-0 transition-all duration-300 ${
-            theme === 'light' ? 'opacity-100 rotate-0' : 'opacity-0 rotate-180'
-          }`}
+          className={`absolute inset-0 transition-all duration-300 ${theme === 'light' ? 'opacity-100 rotate-0' : 'opacity-0 rotate-180'
+            }`}
         >
           <SunIcon />
         </div>
         <div
-          className={`absolute inset-0 transition-all duration-300 ${
-            theme === 'dark' ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-180'
-          }`}
+          className={`absolute inset-0 transition-all duration-300 ${theme === 'dark' ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-180'
+            }`}
         >
           <MoonIcon />
         </div>

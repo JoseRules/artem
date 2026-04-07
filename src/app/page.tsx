@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { DoctorsImage } from '@/assets/DoctorsImage';
 import { useTheme } from '@/contexts/ThemeContext';
 import { RightArrowIcon } from '@/assets/icons';
@@ -39,39 +38,39 @@ export default function Home() {
           w-full md:w-2/3
           space-y-4 md:space-y-8
         ">
-        <div className="space-y-2 md:space-y-6">
-          <h1 className="
+          <div className="space-y-2 md:space-y-6">
+            <h1 className="
             text-xl sm:text-4xl lg:text-5xl
             font-bold
             text-foreground
             leading-tight
             text-center md:text-left
           ">
-            Find your physician and{' '}
-            <span className="text-primary text-xl md:text-3xl lg:text-4xl">schedule an appointment</span>
-          </h1>
-          
-          <p className="
+              Find your physician and{' '}
+              <span className="text-primary text-xl md:text-3xl lg:text-4xl">schedule an appointment</span>
+            </h1>
+
+            <p className="
             text-base sm:text-lg
             text-foreground/80
             leading-relaxed
             text-center md:text-left
           ">
-            Connect with qualified healthcare professionals and book your next medical consultation with ease.
-          </p>
-        </div>
+              Connect with qualified healthcare professionals and book your next medical consultation with ease.
+            </p>
+          </div>
 
-        <div className="w-full flex justify-center">
-          <button
-            type="button"
-            onClick={() => {
-              if (user?._id) {
-                router.push('/account');
-              } else {
-                router.push('/signUp');
-              }
-            }}
-            className="
+          <div className="w-full flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (user?._id) {
+                  router.push('/account');
+                } else {
+                  router.push('/signUp');
+                }
+              }}
+              className="
               inline-flex items-center justify-center gap-2
               min-w-[14rem] px-10 py-3
               bg-primary
@@ -82,11 +81,11 @@ export default function Home() {
               focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
               transition-colors duration-200
             "
-          >
-            Get Started
-            <RightArrowIcon size={20} className="shrink-0 text-white" />
-          </button>
-        </div>
+            >
+              Get Started
+              <RightArrowIcon size={20} className="shrink-0 text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Right Side - Doctors Image */}
@@ -99,7 +98,7 @@ export default function Home() {
             w-[250px] sm:w-full max-w-sm sm:max-w-md lg:max-w-lg
             aspect-square
           ">
-            <DoctorsImage color={theme === 'dark' ? '#4a8fa8' : '#0379c7'} /> 
+            <DoctorsImage color={theme === 'dark' ? '#4a8fa8' : '#0379c7'} />
           </div>
         </div>
       </div>

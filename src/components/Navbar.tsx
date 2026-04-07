@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArtemIcon, CandleIcon } from '@/assets/icons';
+import { ArtemIcon } from '@/assets/icons';
 import ThemeToggle from './ThemeToggle';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
@@ -12,7 +12,7 @@ export default function Navbar() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
-  function handleLogout(){
+  function handleLogout() {
     setUser(null);
     router.push("/");
   }
@@ -43,7 +43,7 @@ export default function Navbar() {
             group cursor-pointer
           ">
 
-              <ArtemIcon color="white" size={40} className="w-8 h-8 sm:w-10 sm:h-10" />
+            <ArtemIcon color="white" size={40} className="w-8 h-8 sm:w-10 sm:h-10" />
 
             <h1 className="
               text-xl sm:text-2xl lg:text-3xl
