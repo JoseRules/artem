@@ -12,9 +12,9 @@ export const login = async (email: string, password: string) => {
     const obj = loggedInUserJson as Record<string, unknown>;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...rest } = obj as Record<string, unknown> & { password?: unknown };
-    return(rest as Record<string, unknown> as any);
+    return (rest as Record<string, unknown>);
   } else {
-    return({
+    return ({
       email,
     });
   }
