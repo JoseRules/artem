@@ -1,14 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
+import { hasAuthenticatedUserId, useUser } from '@/contexts/UserContext';
 import { login } from '@/lib/api/user/login';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUser } = useUser();
+  const { user, setUser } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (hasAuthenticatedUserId(user)) {
+      router.replace('/account');
+    }
+  }, [user, router]);
 
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

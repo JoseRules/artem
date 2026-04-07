@@ -5,19 +5,21 @@ import Link from 'next/link';
 import { ArtemIcon, CandleIcon } from '@/assets/icons';
 import ThemeToggle from './ThemeToggle';
 import { useUser } from '@/contexts/UserContext';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { user } = useUser();
+  const { user, setUser } = useUser();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
+
+  function handleLogout(){
+    setUser(null);
+    router.push("/");
+  }
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const firstName =
-    (typeof user?.firstname === 'string' && user.firstname.trim()) ||
-    (typeof user?.firstName === 'string' && user.firstName.trim()) ||
-    '';
 
   return (
     <nav className="
@@ -57,8 +59,8 @@ export default function Navbar() {
           {/* Right side - Auth buttons or greeting + Theme Toggle */}
           <div className="flex items-center space-x-4">
             {mounted && user ? (
-              <Link
-                href="/account"
+              <button
+                onClick={handleLogout}
                 className="
                   px-4 py-2
                   rounded-lg
@@ -71,8 +73,8 @@ export default function Navbar() {
                   whitespace-nowrap
                 "
               >
-                Hello{firstName ? ` ${firstName}` : ''}!
-              </Link>
+                Log out
+              </button>
             ) : (
               <>
                 <Link

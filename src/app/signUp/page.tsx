@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
+import { hasAuthenticatedUserId, useUser } from '@/contexts/UserContext';
 import { AvailabilityDay, AvailabilityPayloadEntry, SignupPayload } from '@/types/user';
 import { formatHourLabel, toNumberField, toStringField } from '@/utils/formatting';
 import { AVAILABILITY_DAYS, AVAILABILITY_HOURS } from '@/utils/constants';
@@ -53,8 +53,14 @@ function buildAvailabilityPayload(
 
 export default function SignUp() {
   const router = useRouter();
-  const { setUser } = useUser();
+  const { user, setUser } = useUser();
   const [userType, setUserType] = useState<'patient' | 'doctor' | ''>('');
+
+  useEffect(() => {
+    if (hasAuthenticatedUserId(user)) {
+      router.replace('/account');
+    }
+  }, [user, router]);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -9,9 +9,17 @@ export type AppUser = {
   role?: UserRole;
   email?: string;
   id?: string;
+  _id?: string;
   // Allow extra fields from API without blocking the UI.
   [key: string]: unknown;
 } | null;
+
+/** True when `user` has a Mongo-style `_id` (present after successful login). Partial signup state may omit it. */
+export function hasAuthenticatedUserId(user: AppUser): boolean {
+  if (!user) return false;
+  const id = user._id;
+  return typeof id === 'string' && id.length > 0;
+}
 
 type UserContextType = {
   user: AppUser;
