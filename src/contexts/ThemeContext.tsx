@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -11,20 +11,31 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function readStoredTheme(): Theme {
+  const savedTheme = localStorage.getItem('theme') as Theme | null;
+  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme') as Theme | null;
-      if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return prefersDark ? 'dark' : 'light';
-    }
-    return 'light';
-  });
+  // Always start with 'light' so server HTML and the first client render match (hydration-safe).
+  const [theme, setTheme] = useState<Theme>('light');
+  const hasHydratedTheme = useRef(false);
 
   useEffect(() => {
     const root = document.documentElement;
-    // Always set an explicit data-theme to avoid prefers-color-scheme overriding
+
+    if (!hasHydratedTheme.current) {
+      hasHydratedTheme.current = true;
+      const initial = readStoredTheme();
+      setTheme(initial);
+      root.setAttribute('data-theme', initial);
+      try {
+        localStorage.setItem('theme', initial);
+      } catch {}
+      return;
+    }
+
     root.setAttribute('data-theme', theme);
     try {
       localStorage.setItem('theme', theme);
