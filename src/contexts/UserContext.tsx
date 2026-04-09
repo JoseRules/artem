@@ -8,11 +8,17 @@ export type UserRole = 'patient' | 'doctor';
 export type AppUser = {
   role?: UserRole;
   email?: string;
+  name?: string;
+  firstname?: string;
+  lastname?: string;
   id?: string;
   _id?: string;
+  availability?: unknown[]; 
   // Allow extra fields from API without blocking the UI.
   [key: string]: unknown;
 } | null;
+
+
 
 /** True when `user` has a Mongo-style `_id` (present after successful login). Partial signup state may omit it. */
 export function hasAuthenticatedUserId(user: AppUser): boolean {
