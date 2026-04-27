@@ -14,8 +14,9 @@ export type Appointment = {
   date: string; // YYYY-MM-DD
   doctorName: string;
   patientName?: string;
+  patientEmail?: string;
   specialty: string;
-  status: 'Confirmed' | 'Pending';
+  status: 'Confirmed' | 'Pending' | 'Completed';
 };
 
 export type DoctorCard = {

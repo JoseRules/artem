@@ -4,7 +4,7 @@ import { AvailabilityDay, AvailabilityPayloadEntry } from '@/types/user';
 import { AVAILABILITY_DAYS } from '@/utils/constants';
 import { formatAppointmentTime, formatHourLabel } from '@/utils/formatting';
 import { useMemo, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@/assets/icons';
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from '@/assets/icons';
 
 // Date utility functions
 function getMonday(d: Date) {
@@ -25,6 +25,81 @@ function isSameDay(d1: Date, d2: Date) {
     return d1.getFullYear() === d2.getFullYear() &&
            d1.getMonth() === d2.getMonth() &&
            d1.getDate() === d2.getDate();
+}
+
+function StatusDropdown({ currentStatus, onChange }: { currentStatus: string, onChange?: (val: string) => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [internalStatus, setInternalStatus] = useState(currentStatus);
+    
+    // The user requested 'schedule' (Scheduled) instead of Pending
+    const displayStatus = internalStatus === 'Pending' ? 'Scheduled' : internalStatus;
+
+    const styles: Record<string, { badge: string, icon: string, item: string, selectedText: string }> = {
+        'Scheduled': { 
+            badge: 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40', 
+            icon: 'text-amber-600', item: 'hover:bg-amber-500/10 text-foreground/70 hover:text-amber-600', selectedText: 'text-amber-600'
+        },
+        'Confirmed': {
+             badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40',
+             icon: 'text-emerald-600', item: 'hover:bg-emerald-500/10 text-foreground/70 hover:text-emerald-600', selectedText: 'text-emerald-600'
+        },
+        'Completed': {
+             badge: 'bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/40',
+             icon: 'text-blue-600', item: 'hover:bg-blue-500/10 text-foreground/70 hover:text-blue-600', selectedText: 'text-blue-600'
+        }
+    };
+    
+    const activeStyle = styles[displayStatus] || styles['Scheduled'];
+    const statuses = ['Scheduled', 'Confirmed', 'Completed'];
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                className={`
+                    flex items-center gap-2
+                    text-[10px] font-black uppercase tracking-widest
+                    pl-4 pr-3 py-1.5
+                    border-2 rounded-full
+                    focus:outline-none focus:ring-4 focus:ring-primary/20
+                    transition-all duration-300 shadow-sm hover:-translate-y-0.5 hover:shadow-md
+                    ${activeStyle.badge}
+                `}
+            >
+                {displayStatus}
+                <ChevronDownIcon className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} ${activeStyle.icon}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute right-0 top-full mt-2 w-40 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {statuses.map(s => {
+                        const isSelected = displayStatus === s;
+                        return (
+                            <button
+                                key={s}
+                                onClick={() => {
+                                    const newInternal = s === 'Scheduled' ? 'Pending' : s;
+                                    setInternalStatus(newInternal);
+                                    onChange?.(newInternal);
+                                    setIsOpen(false);
+                                }}
+                                className={`
+                                    w-full text-left px-4 py-3 flex items-center justify-between
+                                    text-[10px] font-black uppercase tracking-widest
+                                    transition-colors
+                                    ${isSelected ? styles[s].selectedText + ' bg-primary/5' : styles[s].item}
+                                `}
+                            >
+                                {s}
+                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-current"></div>}
+                            </button>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
 }
 
 export default function DoctorSchedule({ appointments }: { appointments: Appointment[] }) {
@@ -52,33 +127,41 @@ export default function DoctorSchedule({ appointments }: { appointments: Appoint
 
         const userAvailability = user.availability as AvailabilityPayloadEntry[];
         const dayAvail = userAvailability.filter((a) => a.day === selectedDayKey);
+        
+        if (dayAvail.length === 0) return [];
 
-        dayAvail.sort((a, b) => a.start - b.start);
+        // Find the full working range for the day, including appointments that might be outside availability
+        const apptHours = appointments
+            .filter(a => isSameDay(new Date(a.date), selectedDate))
+            .map(a => new Date(a.date).getHours());
+
+        const minHour = Math.min(...dayAvail.map(a => a.start), ...apptHours);
+        const maxHour = Math.max(...dayAvail.map(a => a.end), ...apptHours.map(h => h + 1));
 
         const schedule: Array<{
             hour: number;
-            type: 'appointment' | 'free';
+            type: 'appointment' | 'free' | 'break';
             appointment?: Appointment;
         }> = [];
 
-        dayAvail.forEach((avail) => {
-            for (let h = avail.start; h < avail.end; h++) {
-                const hourLabel = formatHourLabel(h);
-                // Standardize the hour matching by ensuring both have or don't have leading zeros
-                // hourLabel from formatting.ts uses leading zero for hours < 10
-                const appt = appointments.find((a) => {
-                    const apptDate = new Date(a.date);
-                    const timeMatch = formatAppointmentTime(a.date) === hourLabel.replace(/^0/, ''); // Remove leading zero if present for comparison
-                    return isSameDay(apptDate, selectedDate) && timeMatch;
-                });
 
-                schedule.push({
-                    hour: h,
-                    type: appt ? 'appointment' : 'free',
-                    appointment: appt,
-                });
-            }
-        });
+        for (let h = minHour; h < maxHour; h++) {
+            const hourLabel = formatHourLabel(h);
+            const appt = appointments.find((a) => {
+                const apptDate = new Date(a.date);
+                const timeMatch = formatAppointmentTime(a.date) === hourLabel.replace(/^0/, '');
+                return isSameDay(apptDate, selectedDate) && timeMatch;
+            });
+
+            // Check if this hour is explicitly part of any availability block
+            const isAvailable = dayAvail.some(avail => h >= avail.start && h < avail.end);
+
+            schedule.push({
+                hour: h,
+                type: appt ? 'appointment' : (isAvailable ? 'free' : 'break'),
+                appointment: appt,
+            });
+        }
 
         return schedule;
     }, [appointments, isPatient, selectedDayKey, user?.availability, selectedDate]);
@@ -147,25 +230,35 @@ export default function DoctorSchedule({ appointments }: { appointments: Appoint
                                 {slot.type === 'appointment' && slot.appointment ? (
                                     <div className="flex-1 relative">
                                         <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-[0_0_12px_rgba(var(--primary),0.4)]"></div>
-                                        <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 hover:bg-primary/10 transition-all cursor-pointer">
+                                        <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 hover:bg-primary/10 transition-all">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <h4 className="font-bold text-foreground">{slot.appointment.patientName || 'Anonymous Patient'}</h4>
-                                                    <p className="text-sm text-foreground/50">{slot.appointment.specialty || 'Consultation'}</p>
+                                                    <h4 className="font-bold text-foreground shrink-0">{slot.appointment.patientName || 'Anonymous Patient'}</h4>
+                                                    <p className="text-sm font-medium text-foreground/60">{slot.appointment.patientEmail || 'No email provided'}</p>
+                                                    <p className="text-xs text-primary font-semibold mt-1">{slot.appointment.specialty || 'Consultation'}</p>
                                                 </div>
-                                                <span className="text-[10px] font-black bg-white/50 border border-primary/20 px-2 py-1 rounded-md text-primary uppercase">Confirmed</span>
+                                                <StatusDropdown 
+                                                    currentStatus={slot.appointment.status} 
+                                                    onChange={(val) => console.log('Status updated to', val)} 
+                                                />
                                             </div>
-                                            <div className="flex gap-4 mt-3">
+                                            <div className="flex gap-4 mt-4 pt-3 border-t border-primary/10">
                                                 <button className="text-[10px] font-bold text-primary hover:underline">View Medical Record</button>
                                                 <button className="text-[10px] font-bold text-foreground/40 hover:text-foreground">Reschedule</button>
                                             </div>
                                         </div>
                                     </div>
-                                ) : (
+                                ) : slot.type === 'free' ? (
                                     <div className="flex-1">
                                         <div className="border border-dashed border-border rounded-2xl p-4 flex items-center justify-between text-foreground/40 text-sm font-medium hover:bg-muted/50 transition-colors">
                                             <span>Available Slot</span>
                                             <button className="text-[10px] border border-border px-3 py-1 rounded-full hover:bg-foreground hover:text-background transition-all">Manual Block</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 opacity-40">
+                                        <div className="bg-muted/50 rounded-2xl p-4 flex items-center justify-between text-foreground/30 text-xs font-bold italic tracking-wider">
+                                            <span>BREAK / UNAVAILABLE</span>
                                         </div>
                                     </div>
                                 )}

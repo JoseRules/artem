@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, setUser } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   useEffect(() => {
     if (hasAuthenticatedUserId(user)) {
@@ -21,12 +22,20 @@ export default function LoginPage() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      // Not connected yet: mock a short delay so the UI behaves like a real request.
       const formData = new FormData(e.currentTarget as HTMLFormElement);
       const email = String(formData.get('email') ?? '');
       const password = String(formData.get('password') ?? '');
-      setUser(await login(email, password));
-      router.push('/account');
+      
+      const loggedInUser = await login(email, password);
+      if (loggedInUser && hasAuthenticatedUserId(loggedInUser)) {
+          setUser(loggedInUser);
+          router.push('/account');
+      } else {
+          setShowErrorModal(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -197,6 +206,29 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {showErrorModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="bg-background border border-border shadow-2xl rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6 flex flex-col items-center">
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4 text-red-500">
+                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                 </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-foreground">Login Unsuccessful</h3>
+              <p className="text-foreground/60 text-center text-sm mb-6">
+                We couldn't verify your credentials. Please double-check your email and password, and try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowErrorModal(false)}
+                className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors outline-none focus:ring-4 focus:ring-red-500/20 active:scale-95"
+              >
+                Try Again
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

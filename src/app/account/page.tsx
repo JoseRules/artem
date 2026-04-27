@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 import { getApptsByUser } from '@/lib/api/appts/byUser';
+import { bookAppt } from '@/lib/api/appts/book';
+import { bySpecialty } from '@/lib/api/user/bySpecialty';
 import { AVAILABILITY_DAYS, AVAILABILITY_HOURS, SPECIALTY_LABELS } from '@/utils/constants';
-import { AvailabilityDay, AvailabilityPayloadEntry } from '@/types/user';
+import { AvailabilityDay, AvailabilityPayloadEntry, User } from '@/types/user';
 import { ArrowRightIcon, CalendarIcon, ChevronDownIcon, ClockIcon, MapPinIcon } from '@/assets/icons';
 import { formatAppointmentTime, formatDate } from '@/utils/formatting';
 import DoctorSchedule from '@/components/DoctorSchedule';
+import DoctorBookingModal from '@/components/DoctorBookingModal';
 import { SPECIALTIES } from '@/utils/constants';
 import { Appointment } from '@/types/general';
 
@@ -38,6 +41,74 @@ export default function AccountPage() {
   const role = user?.role;
   const isPatient = role === 'patient';
   const [selectedSpecialty, setSelectedSpecialty] = useState<(typeof SPECIALTIES)[number] | ''>('');
+  const [searchedDoctors, setSearchedDoctors] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState<User | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  const handleBookClick = (doc: User) => {
+    setSelectedDoctorForBooking(doc);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleConfirmBooking = async (date: Date, time: string) => {
+    if (!user?._id || !selectedDoctorForBooking?._id) return;
+    
+    // Parse time like '09:00 AM' or '02:00 PM'
+    const match = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    let hours = 0;
+    let minutes = 0;
+    if (match) {
+        hours = parseInt(match[1], 10);
+        minutes = parseInt(match[2], 10);
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+    }
+    
+    const finalDate = new Date(date);
+    finalDate.setHours(hours, minutes, 0, 0);
+
+    try {
+      setHasSearched(false); // reset state if needed
+      await bookAppt(user._id, selectedDoctorForBooking._id, finalDate.toISOString());
+      
+      // Update local state without needing full refresh
+      const newApt: Appointment = {
+          id: Math.random().toString(), // temporary until fetch
+          date: finalDate.toISOString(),
+          doctorName: `Dr. ${selectedDoctorForBooking.firstname} ${selectedDoctorForBooking.lastname}`,
+          specialty: selectedDoctorForBooking.specialty || 'General',
+          status: 'Pending',
+      }
+      setAppointments(prev => [...prev, newApt]);
+      
+      alert(`Booking confirmed for ${date.toLocaleDateString()} at ${time} with Dr. ${selectedDoctorForBooking?.lastname}`);
+      setIsBookingModalOpen(false);
+    } catch(err) {
+      console.error(err);
+      alert('Failed to book appointment');
+    }
+  };
+
+  const handleSearchDoctors = async () => {
+    setIsSearching(true);
+    setHasSearched(true);
+    try {
+      const data = await bySpecialty(selectedSpecialty);
+      if (Array.isArray(data)) {
+        setSearchedDoctors(data);
+      } else {
+        setSearchedDoctors([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch doctors', error);
+      setSearchedDoctors([]);
+    }
+    setIsSearching(false);
+  };
 
   useEffect(() => {
     async function fetchAppts() {
@@ -47,13 +118,23 @@ export default function AccountPage() {
           if (Array.isArray(data)) {
             // Map API data to our Appointment type
             const mapped = data.map((a: any) => {
+              const pFirst = a.patient?.firstname || '';
+              const pLast = a.patient?.lastname || '';
+              const pName = (pFirst || pLast) ? `${pFirst} ${pLast}`.trim() : a.patientName || 'Anonymous';
+              const pEmail = a.patient?.email || a.patientEmail;
+
+              const dFirst = a.doctor?.firstname || '';
+              const dLast = a.doctor?.lastname || '';
+              const dName = (dFirst || dLast) ? `Dr. ${dFirst} ${dLast}`.trim() : a.doctorName || 'Dr. Assigned';
+
               return ({
                 id: a._id || a.id,
                 date: a.date,
-                doctorName: a.doctorName || 'Dr. Assigned',
-                specialty: a.specialty || 'General',
+                doctorName: dName,
+                specialty: a.doctor?.specialty || a.specialty || 'General',
                 status: a.status || 'Confirmed',
-                patientName: a.patientName || 'Anonymous',
+                patientName: pName,
+                patientEmail: pEmail,
               })
             });
             setAppointments(mapped);
@@ -233,6 +314,8 @@ export default function AccountPage() {
 
                     <button
                       type="button"
+                      onClick={handleSearchDoctors}
+                      disabled={isSearching}
                       className="
                         px-8 py-3.5
                         rounded-xl
@@ -242,59 +325,86 @@ export default function AccountPage() {
                         hover:shadow-xl hover:shadow-primary/30
                         hover:scale-[1.02] active:scale-95
                         transition-all duration-200
+                        disabled:opacity-50 disabled:pointer-events-none
                       "
                     >
-                      Search Doctors
+                      {isSearching ? 'Searching...' : 'Search Doctors'}
                     </button>
                   </div>
 
-                  {/*<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                    {filteredDoctors.map((doc: Doctor) => (
-                      <div
-                        key={doc.id}
-                        className="
-                          relative overflow-hidden
-                          bg-background
-                          border border-border/60
-                          rounded-2xl
-                          p-6
-                          hover:border-primary/40
-                          transition-all group
-                        "
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-1">
-                            <h3 className="font-bold text-lg">{doc.name}</h3>
-                            <p className="text-primary text-sm font-semibold">{doc.specialty}</p>
-                            <p className="text-foreground/50 text-xs flex items-center gap-1 mt-1">
-                              <MapPinIcon className="w-3 h-3 text-red-400" />
-                              {doc.location}
-                            </p>
+                  {hasSearched && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-border mt-4">
+                      {searchedDoctors.length > 0 ? (
+                        searchedDoctors.map((doc: User) => (
+                          <div
+                            key={doc._id}
+                            className="
+                              relative overflow-hidden
+                              bg-background
+                              border border-border/60
+                              rounded-2xl
+                              p-6
+                              hover:border-primary/40
+                              transition-all group
+                            "
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex gap-4">
+                                {doc.profilePic ? (
+                                  <img 
+                                    src={doc.profilePic} 
+                                    alt={`Dr. ${doc.lastname}`}
+                                    className="w-14 h-14 rounded-full object-cover border-2 border-primary/20 mt-1"
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 mt-1">
+                                    <span className="text-lg font-bold text-primary">
+                                      {doc.firstname?.[0]}{doc.lastname?.[0]}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="space-y-1">
+                                  <h3 className="font-bold text-lg">Dr. {doc.firstname} {doc.lastname}</h3>
+                                  <p className="text-primary text-sm font-semibold">
+                                    {doc.specialty ? (SPECIALTY_LABELS[doc.specialty.toLowerCase() as keyof typeof SPECIALTY_LABELS] || doc.specialty) : 'General Practice'}
+                                  </p>
+                                  <p className="text-foreground/50 text-xs flex items-center gap-1 mt-1">
+                                    <MapPinIcon className="w-3 h-3 text-red-400" />
+                                    {doc.location || 'Remote'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xl font-black text-foreground">${doc.price || '150'}</span>
+                                <p className="text-[10px] text-foreground/40 uppercase font-bold tracking-tighter">per visit</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleBookClick(doc)}
+                              className="
+                                w-full mt-6
+                                px-4 py-3
+                                rounded-xl
+                                bg-foreground text-background
+                                font-bold text-sm
+                                group-hover:bg-primary group-hover:text-white
+                                transition-all duration-300
+                                flex items-center justify-center gap-2
+                              "
+                            >
+                              Book Appointment
+                              <ArrowRightIcon className="w-4 h-4" />
+                            </button>
                           </div>
-                          <div className="text-right">
-                            <span className="text-xl font-black text-foreground">${doc.price}</span>
-                            <p className="text-[10px] text-foreground/40 uppercase font-bold tracking-tighter">per visit</p>
-                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-1 sm:col-span-2 text-center py-8 text-foreground/50">
+                          {isSearching ? 'Loading doctors...' : 'No doctors found for this specialty.'}
                         </div>
-                        <button
-                          type="button"
-                          className="
-                            w-full mt-6
-                            px-4 py-3
-                            rounded-xl
-                            bg-foreground text-background
-                            font-bold text-sm
-                            group-hover:bg-primary group-hover:text-white
-                            transition-all duration-300
-                            flex items-center justify-center gap-2
-                          "
-                        >
-                          Book Appointment
-                          <ArrowRightIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>*/}
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -304,6 +414,13 @@ export default function AccountPage() {
           <DoctorSchedule appointments={appointments} />
         )}
       </div>
+
+      <DoctorBookingModal
+        doctor={selectedDoctorForBooking}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        onBook={handleConfirmBooking}
+      />
     </div>
   );
 }
