@@ -217,7 +217,7 @@ export default function LoginPage() {
               </div>
               <h3 className="text-xl font-bold mb-2 text-foreground">Login Unsuccessful</h3>
               <p className="text-foreground/60 text-center text-sm mb-6">
-                We couldn't verify your credentials. Please double-check your email and password, and try again.
+                We couldn&apos;t verify your credentials. Please double-check your email and password, and try again.
               </p>
               <button
                 type="button"

@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 import { getApptsByUser } from '@/lib/api/appts/byUser';
 import { bookAppt } from '@/lib/api/appts/book';
 import { bySpecialty } from '@/lib/api/user/bySpecialty';
-import { AVAILABILITY_DAYS, AVAILABILITY_HOURS, SPECIALTY_LABELS } from '@/utils/constants';
-import { AvailabilityDay, AvailabilityPayloadEntry, User } from '@/types/user';
+import { SPECIALTY_LABELS } from '@/utils/constants';
+import { User } from '@/types/user';
 import { ArrowRightIcon, CalendarIcon, ChevronDownIcon, ClockIcon, MapPinIcon } from '@/assets/icons';
-import { formatAppointmentTime, formatDate } from '@/utils/formatting';
+import { formatAppointmentTime } from '@/utils/formatting';
 import DoctorSchedule from '@/components/DoctorSchedule';
 import DoctorBookingModal from '@/components/DoctorBookingModal';
 import { SPECIALTIES } from '@/utils/constants';
@@ -117,7 +118,14 @@ export default function AccountPage() {
           const data = await getApptsByUser(user._id);
           if (Array.isArray(data)) {
             // Map API data to our Appointment type
-            const mapped = data.map((a: any) => {
+            type RawAppt = {
+              _id?: string; id?: string; date: string; status?: string; specialty?: string;
+              patient?: { firstname?: string; lastname?: string; email?: string };
+              patientName?: string; patientEmail?: string;
+              doctor?: { firstname?: string; lastname?: string; specialty?: string };
+              doctorName?: string;
+            };
+            const mapped = data.map((a: RawAppt) => {
               const pFirst = a.patient?.firstname || '';
               const pLast = a.patient?.lastname || '';
               const pName = (pFirst || pLast) ? `${pFirst} ${pLast}`.trim() : a.patientName || 'Anonymous';
@@ -128,11 +136,11 @@ export default function AccountPage() {
               const dName = (dFirst || dLast) ? `Dr. ${dFirst} ${dLast}`.trim() : a.doctorName || 'Dr. Assigned';
 
               return ({
-                id: a._id || a.id,
+                id: a._id ?? a.id ?? '',
                 date: a.date,
                 doctorName: dName,
                 specialty: a.doctor?.specialty || a.specialty || 'General',
-                status: a.status || 'Confirmed',
+                status: (a.status as Appointment['status']) || 'Confirmed',
                 patientName: pName,
                 patientEmail: pEmail,
               })
@@ -287,7 +295,7 @@ export default function AccountPage() {
                         <select
                           id="specialty"
                           value={selectedSpecialty}
-                          onChange={(e) => setSelectedSpecialty(e.target.value as any)}
+                          onChange={(e) => setSelectedSpecialty(e.target.value as (typeof SPECIALTIES)[number] | '')}
                           className="
                             w-full appearance-none
                             pl-4 pr-10 py-3
@@ -351,9 +359,11 @@ export default function AccountPage() {
                             <div className="flex justify-between items-start">
                               <div className="flex gap-4">
                                 {doc.profilePic ? (
-                                  <img 
-                                    src={doc.profilePic} 
+                                  <Image
+                                    src={doc.profilePic}
                                     alt={`Dr. ${doc.lastname}`}
+                                    width={56}
+                                    height={56}
                                     className="w-14 h-14 rounded-full object-cover border-2 border-primary/20 mt-1"
                                   />
                                 ) : (
