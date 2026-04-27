@@ -19,6 +19,8 @@ function buildInitialAvailability(): Record<AvailabilityDay, boolean[]> {
     wednesday: Array(slotsCount).fill(false),
     thursday: Array(slotsCount).fill(false),
     friday: Array(slotsCount).fill(false),
+    saturday: Array(slotsCount).fill(false),
+    sunday: Array(slotsCount).fill(false),
   };
 }
 

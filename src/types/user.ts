@@ -1,6 +1,6 @@
 export type AvailabilityPayloadEntry = { day: AvailabilityDay; start: number; end: number };
 
-export type AvailabilityDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
+export type AvailabilityDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 export type User = {
   _id: string;
