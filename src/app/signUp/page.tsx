@@ -185,6 +185,8 @@ export default function SignUp() {
                     <Image
                       src={profilePicture}
                       alt="Profile preview"
+                      width={128}
+                      height={128}
                       className="
                         w-32 h-32
                         rounded-full
